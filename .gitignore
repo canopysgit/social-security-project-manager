@@ -53,3 +53,11 @@ pids
 # Temporary folders
 tmp/
 temp/
+
+# Reference materials (not part of project)
+reference/
+../reference/
+**/reference/
+
+# Project documentation outside of main project
+../CLAUDE.md

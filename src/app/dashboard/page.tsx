@@ -3,12 +3,40 @@
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { testConnection } from '@/lib/supabase'
+import { Project } from '@/lib/types'
+import ProjectCreateModal from '@/components/projects/ProjectCreateModal'
 
 export default function DashboardPage() {
   const { user, logout } = useAuth()
   const router = useRouter()
-  const [projects, setProjects] = useState([]) // 后续从数据库获取
+  const [projects, setProjects] = useState<Project[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [dbStatus, setDbStatus] = useState(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+
+  // 获取项目列表
+  const fetchProjects = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/projects', {
+        headers: {
+          'Accept': 'application/json; charset=utf-8'
+        }
+      })
+      const result = await response.json()
+      
+      if (result.success) {
+        console.log('获取到的项目数据:', result.data)
+        setProjects(result.data || [])
+      } else {
+        console.error('获取项目列表失败:', result.error)
+      }
+    } catch (error) {
+      console.error('获取项目列表出错:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (!user?.isAuthenticated) {
@@ -16,8 +44,19 @@ export default function DashboardPage() {
       return
     }
 
-    // 测试 Supabase 连接
-    testConnection()
+    // 获取项目列表
+    fetchProjects()
+    
+    // 检查数据库表结构
+    fetch('/api/database/inspect')
+      .then(res => res.json())
+      .then(data => {
+        console.log('📊 数据库检查结果:', data)
+        setDbStatus(data)
+      })
+      .catch(err => {
+        console.error('检查数据库失败:', err)
+      })
   }, [user, router])
 
   const handleLogout = () => {
@@ -26,18 +65,26 @@ export default function DashboardPage() {
   }
 
   const handleCreateProject = () => {
-    // TODO: 实现创建项目功能
-    alert('创建项目功能开发中...')
+    setShowCreateModal(true)
+  }
+
+  const handleCreateSuccess = () => {
+    fetchProjects() // 重新获取项目列表
   }
 
   const handleProjectClick = (projectId: string) => {
-    // TODO: 进入项目详情页
     router.push(`/projects/${projectId}`)
   }
 
   if (!user?.isAuthenticated) {
-    return null // 重定向中
+    return null
   }
+
+  // 计算统计数据
+  const totalProjects = projects.length
+  const completedProjects = projects.filter(p => p.stats.calculation_status === 'completed').length
+  const inProgressProjects = projects.filter(p => p.stats.calculation_status === 'in_progress').length
+  const totalEmployees = projects.reduce((sum, p) => sum + p.stats.total_employees, 0)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -96,7 +143,7 @@ export default function DashboardPage() {
                   </svg>
                 </div>
                 <div className="ml-4">
-                  <h3 className="text-2xl font-bold text-gray-900">0</h3>
+                  <h3 className="text-2xl font-bold text-gray-900">{totalProjects}</h3>
                   <p className="text-gray-600">总项目数</p>
                 </div>
               </div>
@@ -110,7 +157,7 @@ export default function DashboardPage() {
                   </svg>
                 </div>
                 <div className="ml-4">
-                  <h3 className="text-2xl font-bold text-gray-900">0</h3>
+                  <h3 className="text-2xl font-bold text-gray-900">{completedProjects}</h3>
                   <p className="text-gray-600">已完成</p>
                 </div>
               </div>
@@ -124,7 +171,7 @@ export default function DashboardPage() {
                   </svg>
                 </div>
                 <div className="ml-4">
-                  <h3 className="text-2xl font-bold text-gray-900">0</h3>
+                  <h3 className="text-2xl font-bold text-gray-900">{inProgressProjects}</h3>
                   <p className="text-gray-600">进行中</p>
                 </div>
               </div>
@@ -138,7 +185,7 @@ export default function DashboardPage() {
                   </svg>
                 </div>
                 <div className="ml-4">
-                  <h3 className="text-2xl font-bold text-gray-900">0</h3>
+                  <h3 className="text-2xl font-bold text-gray-900">{totalEmployees}</h3>
                   <p className="text-gray-600">总员工数</p>
                 </div>
               </div>
@@ -151,25 +198,120 @@ export default function DashboardPage() {
               <h3 className="text-lg font-medium text-gray-900">项目列表</h3>
             </div>
             
-            {/* 暂无项目时的空状态 */}
-            <div className="p-12 text-center">
-              <div className="text-gray-400 mb-4">
-                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
+            {isLoading ? (
+              <div className="p-12 text-center">
+                <div className="text-gray-400">加载中...</div>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">暂无项目</h3>
-              <p className="text-gray-500 mb-6">
-                创建您的第一个社保补缴计算项目，开始数据分析
-              </p>
-              <button
-                onClick={handleCreateProject}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-md text-sm font-medium"
-              >
-                立即创建
-              </button>
-            </div>
+            ) : projects.length === 0 ? (
+              /* 暂无项目时的空状态 */
+              <div className="p-12 text-center">
+                <div className="text-gray-400 mb-4">
+                  <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">暂无项目</h3>
+                <p className="text-gray-500 mb-6">
+                  创建您的第一个社保补缴计算项目，开始数据分析
+                </p>
+                <button
+                  onClick={handleCreateProject}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-md text-sm font-medium"
+                >
+                  立即创建
+                </button>
+              </div>
+            ) : (
+              /* 项目列表 */
+              <div className="divide-y divide-gray-200">
+                {projects.map((project) => (
+                  <div
+                    key={project.id}
+                    className="p-6 hover:bg-gray-50 cursor-pointer"
+                    onClick={() => handleProjectClick(project.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3">
+                          <h4 className="text-lg font-medium text-gray-900">{project.name}</h4>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {project.id}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-sm text-gray-600">
+                          <span>{project.company_name}</span>
+                          <span className="mx-2">•</span>
+                          <span>{project.project_period.substring(0,4)}年{project.project_period.substring(4,6)}月</span>
+                          <span className="mx-2">•</span>
+                          <span>{new Date(project.created_at).toLocaleDateString()}</span>
+                        </div>
+                        {project.description && (
+                          <p className="mt-1 text-sm text-gray-500">{project.description}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <div className="text-center">
+                          <div className="text-lg font-medium text-gray-900">{project.stats.total_employees}</div>
+                          <div className="text-xs text-gray-500">员工数</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-medium text-gray-900">{project.stats.salary_records_count}</div>
+                          <div className="text-xs text-gray-500">工资记录</div>
+                        </div>
+                        <div className="text-center">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            project.stats.calculation_status === 'completed' ? 'bg-green-100 text-green-800' :
+                            project.stats.calculation_status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                            project.stats.calculation_status === 'failed' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {project.stats.calculation_status === 'completed' ? '已完成' :
+                             project.stats.calculation_status === 'in_progress' ? '计算中' :
+                             project.stats.calculation_status === 'failed' ? '失败' : '待处理'}
+                          </span>
+                        </div>
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+
+          {/* 数据库状态 */}
+          {dbStatus && (
+            <div className="mt-8 bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">数据库状态检查</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {Object.entries(dbStatus.tables).map(([tableName, tableInfo]: [string, any]) => (
+                  <div key={tableName} className={`p-4 rounded-lg border ${
+                    tableInfo.exists ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-gray-900">{tableName}</h4>
+                      <div className={`w-3 h-3 rounded-full ${
+                        tableInfo.exists ? 'bg-green-500' : 'bg-red-500'
+                      }`}></div>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {tableInfo.exists ? `${tableInfo.count} 条记录` : '表不存在'}
+                    </p>
+                    {tableInfo.exists && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {tableInfo.fields.length} 个字段
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 text-xs text-gray-500">
+                检查时间: {new Date(dbStatus.timestamp).toLocaleString()}
+              </div>
+            </div>
+          )}
 
           {/* 使用说明 */}
           <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
@@ -194,6 +336,13 @@ export default function DashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* 项目创建弹窗 */}
+      <ProjectCreateModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={handleCreateSuccess}
+      />
     </div>
   )
 }

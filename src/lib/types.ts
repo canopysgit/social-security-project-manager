@@ -35,36 +35,50 @@ export interface ProjectCreateForm {
   description?: string;
 }
 
-// 政策规则类型
+// 政策规则类型（新格式 - 独立政策表）
 export interface PolicyRule {
-  id: string
-  project_id: string
+  id: string // 格式：city+year+period，如 foshan2023H1
+  name: string // 政策名称
+  city: string
   year: number
   period: 'H1' | 'H2'
-  city: string
   
-  // 各险种基数上下限
+  // 有效期
+  effective_start: string // YYYY-MM-DD
+  effective_end: string   // YYYY-MM-DD
+  
+  // 养老保险
   pension_base_floor: number
   pension_base_cap: number
-  pension_rate: number
+  pension_rate_staff: number     // 个人费率
+  pension_rate_enterprise: number // 企业费率
   
+  // 医疗保险
   medical_base_floor: number
   medical_base_cap: number
-  medical_rate: number
+  medical_rate_staff: number
+  medical_rate_enterprise: number
   
+  // 失业保险
   unemployment_base_floor: number
   unemployment_base_cap: number
-  unemployment_rate: number
+  unemployment_rate_staff: number
+  unemployment_rate_enterprise: number
   
+  // 工伤保险
   injury_base_floor: number
   injury_base_cap: number
-  injury_rate: number
+  injury_rate_staff: number
+  injury_rate_enterprise: number
   
+  // 住房公积金
   hf_base_floor: number
   hf_base_cap: number
-  hf_rate: number
+  hf_rate_staff: number
+  hf_rate_enterprise: number
   
   created_at: string
+  updated_at: string
 }
 
 // 工资记录类型
@@ -139,6 +153,161 @@ export const formatProjectPeriod = (period: string): string => {
     return `${year}年${month}月`;
   }
   return period;
+}
+
+
+// 全局政策类型
+export interface GlobalPolicy {
+  id: string
+  policy_name: string
+  city: string
+  year: number
+  period: string // 'H1', 'H2', 'Q1', 'Q2', 'Q3', 'Q4', '全年'
+  
+  // 政策基本信息
+  effective_date: string
+  description?: string
+  
+  // 养老保险
+  pension_base_floor: number
+  pension_base_cap: number
+  pension_rate_individual: number
+  pension_rate_company: number
+  
+  // 医疗保险
+  medical_base_floor: number
+  medical_base_cap: number
+  medical_rate_individual: number
+  medical_rate_company: number
+  
+  // 失业保险
+  unemployment_base_floor: number
+  unemployment_base_cap: number
+  unemployment_rate_individual: number
+  unemployment_rate_company: number
+  
+  // 工伤保险
+  injury_base_floor: number
+  injury_base_cap: number
+  injury_rate_company: number
+  
+  // 住房公积金
+  hf_base_floor: number
+  hf_base_cap: number
+  hf_rate_individual: number
+  hf_rate_company: number
+  
+  // 状态和元数据
+  is_active: boolean
+  created_by?: string
+  created_at: string
+  updated_at: string
+}
+
+// 项目政策关联类型
+export interface ProjectPolicy {
+  id: string
+  project_id: string
+  policy_id: string
+  is_active: boolean
+  applied_at: string
+  applied_by?: string
+}
+
+// 数据上传配置类型
+export interface UploadConfig {
+  id: string
+  project_id: string
+  
+  // 数据模式配置
+  data_mode: 'monthly_detail' | 'average_restore'
+  
+  // 字段映射配置
+  field_mappings: Record<string, string> // Excel列名到系统字段的映射
+  
+  // 校验规则配置
+  validation_rules: Record<string, any> // 数据校验规则
+  
+  // 还原配置（仅用于average_restore模式）
+  restoration_config: Record<string, any> // 月度还原的配置参数
+  
+  created_at: string
+  updated_at: string
+}
+
+// 计算配置类型
+export interface CalculationConfig {
+  id: string
+  project_id: string
+  
+  // 工资基数配置
+  wage_base_config: {
+    selected_fields: string[]
+    calculation_mode: 'monthly_detail' | 'average_restore'
+    calculation_formula: string
+  }
+  
+  // 员工分类配置
+  employee_categories: Array<{
+    name: string
+    conditions: Record<string, any>
+    wage_calculation_rules: Record<string, any>
+  }>
+  
+  // 计算参数配置
+  calculation_params: Record<string, any>
+  
+  // 特殊规则配置
+  special_rules: Array<{
+    name: string
+    condition: Record<string, any>
+    action: Record<string, any>
+  }>
+  
+  created_at: string
+  updated_at: string
+}
+
+// 政策创建/编辑表单类型
+export interface PolicyForm {
+  policy_name: string
+  city: string
+  year: number
+  period: string
+  effective_date: string
+  description?: string
+  
+  // 养老保险
+  pension_base_floor: number
+  pension_base_cap: number
+  pension_rate_individual: number
+  pension_rate_company: number
+  
+  // 医疗保险
+  medical_base_floor: number
+  medical_base_cap: number
+  medical_rate_individual: number
+  medical_rate_company: number
+  
+  // 失业保险
+  unemployment_base_floor: number
+  unemployment_base_cap: number
+  unemployment_rate_individual: number
+  unemployment_rate_company: number
+  
+  // 工伤保险
+  injury_base_floor: number
+  injury_base_cap: number
+  injury_rate_company: number
+  
+  // 住房公积金
+  hf_base_floor: number
+  hf_base_cap: number
+  hf_rate_individual: number
+  hf_rate_company: number
+  
+  is_active: boolean
+  created_by?: string
 }
 
 // 公司简称验证

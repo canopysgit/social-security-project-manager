@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>测试文件上传</title>
+</head>
+<body>
+    <h1>政策Excel文件上传测试</h1>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".xlsx,.xls" id="fileInput" />
+        <button type="submit">上传文件</button>
+    </form>
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const fileInput = document.getElementById('fileInput');
+            const resultDiv = document.getElementById('result');
+            
+            if (fileInput.files.length === 0) {
+                resultDiv.innerHTML = '<p style="color: red;">请选择文件</p>';
+                return;
+            }
+            
+            formData.append('file', fileInput.files[0]);
+            
+            resultDiv.innerHTML = '<p>上传中...</p>';
+            
+            try {
+                const response = await fetch('/api/policies/import', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                console.log('上传结果:', result);
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `
+                        <h3 style="color: green;">上传成功！</h3>
+                        <p>总解析: ${result.final_summary.total_parsed}</p>
+                        <p>导入成功: ${result.final_summary.total_imported}</p>
+                        <p>导入失败: ${result.final_summary.total_failed}</p>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <h3 style="color: red;">上传失败！</h3>
+                        <p>${result.message}</p>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                console.error('上传错误:', error);
+                resultDiv.innerHTML = `<p style="color: red;">上传失败: ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

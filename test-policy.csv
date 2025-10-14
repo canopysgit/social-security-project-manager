@@ -1,0 +1,4 @@
+name,city,year,period,pension_base_floor,pension_base_cap,pension_rate_staff,pension_rate_enterprise,medical_base_floor,medical_base_cap,medical_rate_staff,medical_rate_enterprise,unemployment_base_floor,unemployment_base_cap,unemployment_rate_staff,unemployment_rate_enterprise,injury_base_floor,injury_base_cap,injury_rate_staff,injury_rate_enterprise,hf_base_floor,hf_base_cap,hf_rate_staff,hf_rate_enterprise
+佛山2023年上半年五险一金政策,佛山,2023,H1,1900,24330,0.08,0.14,1900,24330,0.02,0.055,1900,24330,0.0032,0.008,1900,24330,0,0.001,1900,34860,0.05,0.05
+佛山2023年下半年五险一金政策,佛山,2023,H2,1900,26421,0.08,0.14,1900,26421,0.02,0.055,1900,26421,0.0032,0.008,1900,26421,0,0.001,1900,37860,0.05,0.05
+佛山2024年上半年五险一金政策,佛山,2024,H1,1900,27681,0.08,0.14,1900,27681,0.02,0.055,1900,27681,0.0032,0.008,1900,27681,0,0.001,1900,39570,0.05,0.05

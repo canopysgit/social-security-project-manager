@@ -4,10 +4,10 @@ import { supabase } from '@/lib/supabase'
 // 获取单个项目详情
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id
+    const { id } = await params
     
     console.log(`📋 获取项目详情: ${id}`)
     

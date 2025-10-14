@@ -85,10 +85,11 @@ export const calculateEffectiveDates = (year: number, period: 'H1' | 'H2') => {
   }
 }
 
-// 生成政策ID（使用标准UUID格式）
+// 生成政策ID（使用有含义的格式）
 export const generatePolicyId = (city: string, year: number, period: 'H1' | 'H2'): string => {
-  // 生成标准UUID
-  return crypto.randomUUID()
+  // 生成有含义的ID：城市拼音 + 年份 + 期间
+  const cityCode = city.toLowerCase().replace(/[^a-z0-9]/g, '')
+  return `${cityCode}${year}${period}`
 }
 
 // 获取政策的可读ID

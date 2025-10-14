@@ -310,6 +310,63 @@ export interface PolicyForm {
   created_by?: string
 }
 
+// 公司类型定义
+export interface Company {
+  id: string
+  project_id: string
+  name: string
+  city: string
+  
+  // 政策关联（改为多选）
+  selected_policy_ids: string[]
+  
+  // 工资模式配置
+  wage_calculation_mode: 'monthly_detail' | 'average_restore'
+  
+  // 工资结构配置（每个公司独立配置）
+  wage_structure_config: {
+    basic_field: string // 例如：basic_salary
+    gross_field: string // 例如：gross_salary
+    additional_fields: string[] // 例如：['bonus1', 'allowance1', 'allowance2']
+  }
+  
+  created_at: string
+}
+
+// 工资记录类型（更新）
+export interface SalaryRecord {
+  id: string
+  project_id: string
+  company_id: string // 新增公司关联
+  employee_id: string
+  employee_name?: string
+  department?: string
+  salary_month: string
+  basic_salary: number
+  gross_salary: number
+  additional_data: Record<string, number> // 存储bonus1, allowance1等
+  
+  // 数据来源标记
+  data_source: 'monthly_detail' | 'average_restore'
+  original_record_id?: string // 用于还原模式关联原始记录
+  
+  created_at: string
+}
+
+// 公司创建表单
+export interface CompanyCreateForm {
+  name: string
+  city: string
+  selected_policy_ids: string[]
+}
+
+// 工资结构配置表单
+export interface WageStructureForm {
+  basic_field: string
+  gross_field: string
+  additional_fields: string[]
+}
+
 // 公司简称验证
 export const validateCompanyCode = (code: string): boolean => {
   // 2-10个字符，只允许大写字母和数字

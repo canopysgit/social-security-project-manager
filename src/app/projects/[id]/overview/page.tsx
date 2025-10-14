@@ -6,43 +6,61 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
   Settings, 
-  Upload, 
-  Calculator, 
-  Search, 
-  Shield, 
-  Users,
-  FileText,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Building2,
+  Plus
 } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { Project, Company } from '@/lib/types'
 
-export default function ProjectOverviewPage({ params }: { params: { id: string } }) {
-  const pathname = usePathname()
-  const [project, setProject] = useState<any>(null)
+export default function ProjectOverviewPage({ params }: { params: Promise<{ id: string }> }) {
+  const [project, setProject] = useState<Project | null>(null)
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [projectId, setProjectId] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // 项目信息已经从layout中传入，这里可以从URL参数获取
-    const loadProject = async () => {
+    const getProjectId = async () => {
+      const { id } = await params
+      setProjectId(id)
+    }
+    getProjectId()
+  }, [params])
+
+  useEffect(() => {
+    const loadData = async () => {
+      if (!projectId) return
+      
       try {
-        const response = await fetch(`/api/projects/${params.id}`)
-        const result = await response.json()
         
-        if (result.success) {
-          setProject(result.data)
+        // 加载项目信息
+        const projectResponse = await fetch(`/api/projects/${projectId}`)
+        const projectResult = await projectResponse.json()
+        
+        if (projectResult.success) {
+          setProject(projectResult.data)
+        }
+        
+        // 加载公司信息
+        const companiesResponse = await fetch(`/api/companies?project_id=${projectId}`)
+        const companiesResult = await companiesResponse.json()
+        
+        if (companiesResult.success) {
+          setCompanies(companiesResult.data || [])
         }
       } catch (error) {
-        console.error('加载项目失败:', error)
+        console.error('加载数据失败:', error)
       } finally {
         setLoading(false)
       }
     }
 
-    loadProject()
-  }, [params.id])
+    if (projectId) {
+      loadData()
+    }
+  }, [projectId])
 
   if (loading) {
     return (
@@ -107,13 +125,51 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
     )
   }
 
+  // 获取步骤的动态状态
+  const getStepsWithStatus = () => {
+    const steps = getProjectSteps()
+    
+    return steps.map(step => {
+      let status = 'pending'
+      let description = step.description
+      
+      // 根据实际数据判断状态
+      if (step.id === 'companies') {
+        if (companies.length > 0) {
+          status = 'completed'
+          description = `已配置 ${companies.length} 个公司`
+        }
+      } else if (step.id === 'policy-config') {
+        // 检查是否所有公司都配置了政策
+        if (companies.length > 0) {
+          const companiesWithPolicy = companies.filter(company => company.selected_policy_id)
+          if (companiesWithPolicy.length === companies.length) {
+            status = 'completed'
+            description = `所有公司已配置政策`
+          } else if (companiesWithPolicy.length > 0) {
+            status = 'in_progress'
+            description = `${companiesWithPolicy.length}/${companies.length} 个公司已配置政策`
+          }
+        }
+      }
+      // 后续步骤状态判断可以根据实际数据添加
+      
+      return {
+        ...step,
+        status,
+        description,
+        href: step.id === 'companies' ? 'companies' : step.href
+      }
+    })
+  }
+
   return (
     <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
       <div className="px-4 py-6 sm:px-0">
         {/* 页面标题 */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">项目概览</h1>
-          <p className="text-gray-600 mt-2">查看项目整体状态和快速访问各功能模块</p>
+          <p className="text-gray-600 mt-2">查看项目整体状态和项目流程进度</p>
         </div>
 
         {/* 项目基本信息 */}
@@ -134,6 +190,10 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
               <div>
                 <label className="text-sm font-medium text-gray-500">公司名称</label>
                 <p className="text-lg font-semibold text-gray-900">{project.company_name}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">子公司数量</label>
+                <p className="text-lg font-semibold text-gray-900">{companies.length} 个</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">项目周期</label>
@@ -171,129 +231,188 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
           </CardContent>
         </Card>
 
-        {/* 数据统计 */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <Users className="h-8 w-8 text-blue-500" />
-                <div className="ml-4">
-                  <h3 className="text-2xl font-bold text-gray-900">{project.stats.total_employees}</h3>
-                  <p className="text-gray-600">员工总数</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <FileText className="h-8 w-8 text-green-500" />
-                <div className="ml-4">
-                  <h3 className="text-2xl font-bold text-gray-900">{project.stats.salary_records_count}</h3>
-                  <p className="text-gray-600">工资记录</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <Calculator className="h-8 w-8 text-purple-500" />
-                <div className="ml-4">
-                  <h3 className="text-2xl font-bold text-gray-900">0</h3>
-                  <p className="text-gray-600">计算结果</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                {getStatusIcon(project.stats.calculation_status)}
-                <div className="ml-4">
-                  <h3 className="text-lg font-bold text-gray-900">{getStatusText(project.stats.calculation_status)}</h3>
-                  <p className="text-gray-600">计算状态</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* 快速操作入口 */}
-        <Card>
+    
+        {/* 子公司管理 */}
+        <Card className="mb-8">
           <CardHeader>
-            <CardTitle>快速操作</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle>子公司管理</CardTitle>
+              {projectId && (
+                <Link href={`/projects/${projectId}/companies`}>
+                  <Button variant="outline" size="sm">
+                    管理子公司
+                  </Button>
+                </Link>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Link href={`/projects/${params.id}/policy-config`}>
-                <div className="p-6 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer">
-                  <Settings className="h-8 w-8 text-indigo-500 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">政策配置</h3>
-                  <p className="text-sm text-gray-600">选择或创建适用的社保政策规则</p>
-                </div>
-              </Link>
-
-              <Link href={`/projects/${params.id}/upload-config`}>
-                <div className="p-6 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer">
-                  <Upload className="h-8 w-8 text-blue-500 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">上传配置</h3>
-                  <p className="text-sm text-gray-600">配置工资数据模式和字段映射</p>
-                </div>
-              </Link>
-
-              <Link href={`/projects/${params.id}/upload`}>
-                <div className="p-6 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer">
-                  <Upload className="h-8 w-8 text-green-500 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">数据上传</h3>
-                  <p className="text-sm text-gray-600">上传Excel工资数据文件</p>
-                </div>
-              </Link>
-
-              <Link href={`/projects/${params.id}/calculate`}>
-                <div className="p-6 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer">
-                  <Calculator className="h-8 w-8 text-purple-500 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">执行计算</h3>
-                  <p className="text-sm text-gray-600">运行社保补缴计算</p>
-                </div>
-              </Link>
-
-              <Link href={`/projects/${params.id}/results`}>
-                <div className="p-6 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer">
-                  <Search className="h-8 w-8 text-yellow-500 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">结果查询</h3>
-                  <p className="text-sm text-gray-600">查询和导出计算结果</p>
-                </div>
-              </Link>
-
-              <Link href={`/projects/${params.id}/compliance`}>
-                <div className="p-6 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer">
-                  <Shield className="h-8 w-8 text-red-500 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">合规分析</h3>
-                  <p className="text-sm text-gray-600">检查数据合规性</p>
-                </div>
-              </Link>
-
-              <Link href={`/projects/${params.id}/calc-config`}>
-                <div className="p-6 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer">
-                  <Calculator className="h-8 w-8 text-orange-500 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">计算配置</h3>
-                  <p className="text-sm text-gray-600">配置计算参数和规则</p>
-                </div>
-              </Link>
-
-              <div className="p-6 border border-gray-200 rounded-lg opacity-50">
-                <FileText className="h-8 w-8 text-gray-400 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">更多功能</h3>
-                <p className="text-sm text-gray-600">敬请期待...</p>
+            {companies.length === 0 ? (
+              <div className="text-center py-8">
+                <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">暂无子公司</h3>
+                <p className="text-gray-600 mb-4">开始添加子公司以管理不同主体的社保政策</p>
+                {projectId && (
+                  <Link href={`/projects/${projectId}/companies`}>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      添加子公司
+                    </Button>
+                  </Link>
+                )}
               </div>
-            </div>
+            ) : (
+              <div className="space-y-4">
+                {companies.map((company) => (
+                  <div key={company.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <Building2 className="h-6 w-6 text-blue-500" />
+                      <div>
+                        <h4 className="font-medium text-gray-900">{company.name}</h4>
+                        <p className="text-sm text-gray-600">
+                          {company.city} • {company.wage_calculation_mode === 'monthly_detail' ? '完整月工资' : '平均工资还原'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {company.selected_policy_id ? (
+                        <Badge variant="default">已配置政策</Badge>
+                      ) : (
+                        <Badge variant="outline">未配置政策</Badge>
+                      )}
+                      {projectId && (
+                        <Link href={`/projects/${projectId}/companies`}>
+                          <Button variant="ghost" size="sm">
+                            <Settings className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
+
+      {/* 项目步骤流程 */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">项目流程</h2>
+          
+          {/* 步骤列表 */}
+          <div className="space-y-3">
+            {getStepsWithStatus().map((step, index) => (
+              <Card key={step.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-600 font-semibold">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3">
+                          <h3 className="text-lg font-semibold text-gray-900">{step.title}</h3>
+                          {getStepStatusIcon(step.status)}
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">{step.description}</p>
+                      </div>
+                    </div>
+                    <Link href={step.href && projectId ? `/projects/${projectId}/${step.href}` : (projectId ? `/projects/${projectId}/companies` : '#')}>
+                      <Button variant="outline" size="sm">
+                        {step.status === 'completed' ? '查看' : 
+                         step.status === 'in_progress' ? '继续' : '开始'}
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )
+}
+
+// 步骤配置
+const getProjectSteps = () => {
+  return [
+    {
+      id: 'companies',
+      title: '子公司管理',
+      description: '管理项目下的子公司信息',
+      href: '',
+      status: 'pending' // 将根据实际数据动态判断
+    },
+    {
+      id: 'policy-config',
+      title: '政策配置',
+      description: '为每个子公司选择对应城市的社保规则',
+      href: 'policy-config',
+      status: 'pending'
+    },
+    {
+      id: 'upload-config',
+      title: '上传配置',
+      description: '配置工资字段映射和数据格式',
+      href: 'upload-config',
+      status: 'pending'
+    },
+    {
+      id: 'data-upload',
+      title: '数据上传',
+      description: '上传工资数据文件（完整月工资或平均工资还原）',
+      href: 'upload',
+      status: 'pending'
+    },
+    {
+      id: 'calc-config',
+      title: '计算配置',
+      description: '配置工资计算规则和参数',
+      href: 'calc-config',
+      status: 'pending'
+    },
+    {
+      id: 'calculate',
+      title: '执行计算',
+      description: '运行社保补缴计算',
+      href: 'calculate',
+      status: 'pending'
+    },
+    {
+      id: 'results',
+      title: '结果查询',
+      description: '查询和导出计算结果',
+      href: 'results',
+      status: 'pending'
+    },
+    {
+      id: 'actual-upload',
+      title: '实缴数据上传',
+      description: '上传实际缴费数据用于对比分析',
+      href: 'actual-upload',
+      status: 'pending'
+    },
+    {
+      id: 'compliance',
+      title: '合规分析',
+      description: '应缴vs实缴对比分析',
+      href: 'compliance',
+      status: 'pending'
+    }
+  ]
+}
+
+// 获取步骤状态图标
+const getStepStatusIcon = (status: string) => {
+  switch (status) {
+    case 'completed':
+      return <CheckCircle className="h-4 w-4 text-green-500" />
+    case 'in_progress':
+      return <Clock className="h-4 w-4 text-blue-500" />
+    case 'error':
+      return <AlertCircle className="h-4 w-4 text-red-500" />
+    default:
+      return <div className="h-4 w-4 border-2 border-gray-300 rounded-full" />
+  }
 }

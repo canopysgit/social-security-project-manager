@@ -100,7 +100,9 @@ export async function POST(request: NextRequest) {
         project_id: companyData.project_id,
         name: companyData.name,
         city: companyData.city,
-        selected_policy_id: policyData  // 存储JSON数组
+        selected_policy_id: policyData,  // 存储JSON数组
+        wage_calculation_mode: null,     // 明确设置为NULL
+        wage_structure_config: null      // 明确设置为NULL
       })
       .select()
       .single()

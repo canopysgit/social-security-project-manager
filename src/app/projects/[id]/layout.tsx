@@ -145,7 +145,7 @@ export default function ProjectLayout({ children, params }: ProjectLayoutProps) 
                     子公司管理
                   </div>
                 </Link>
-                <Link href={`/projects/${projectId}/policy-config`}>
+                <Link href={`/projects/${projectId}/companies`}>
                   <div className="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 cursor-pointer flex items-center">
                     <Settings className="h-4 w-4 mr-2" />
                     政策配置

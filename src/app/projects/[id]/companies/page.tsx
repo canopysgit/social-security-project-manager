@@ -120,16 +120,6 @@ export default function CompaniesPage() {
   // 更新公司
   const handleUpdateCompany = async () => {
     if (!editingCompany) return
-    
-    if (!formData.name.trim()) {
-      toast.error('请输入子公司名称')
-      return
-    }
-    
-    if (!formData.city.trim()) {
-      toast.error('请选择城市')
-      return
-    }
 
     try {
       const response = await fetch(`/api/companies/${editingCompany.id}`, {
@@ -443,41 +433,46 @@ export default function CompaniesPage() {
           
           <div>
             <Label htmlFor="edit_city">所在城市 *</Label>
-            <Select
+            <Input
+              id="edit_city"
               value={formData.city}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, city: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="选择城市" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="佛山市">佛山市</SelectItem>
-                <SelectItem value="广州市">广州市</SelectItem>
-                <SelectItem value="深圳市">深圳市</SelectItem>
-                <SelectItem value="东莞市">东莞市</SelectItem>
-                <SelectItem value="中山市">中山市</SelectItem>
-              </SelectContent>
-            </Select>
+              onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+              placeholder="请输入所在城市"
+            />
           </div>
           
           <div>
-            <Label htmlFor="edit_selected_policy_id">选择政策（可选）</Label>
-            <Select
-              value={formData.selected_policy_id}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, selected_policy_id: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="选择政策" />
-              </SelectTrigger>
-              <SelectContent>
-                {policies.map((policy) => (
-                  <SelectItem key={policy.id} value={policy.id}>
+            <Label>选择政策（可多选）</Label>
+            <div className="mt-2 space-y-2 max-h-40 overflow-y-auto border rounded-md p-3">
+              {policies.map((policy) => (
+                <div key={policy.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`edit_policy_${policy.id}`}
+                    checked={formData.selected_policy_ids.includes(policy.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setFormData(prev => ({
+                          ...prev,
+                          selected_policy_ids: [...prev.selected_policy_ids, policy.id]
+                        }))
+                      } else {
+                        setFormData(prev => ({
+                          ...prev,
+                          selected_policy_ids: prev.selected_policy_ids.filter(id => id !== policy.id)
+                        }))
+                      }
+                    }}
+                  />
+                  <Label 
+                    htmlFor={`edit_policy_${policy.id}`}
+                    className="text-sm font-normal cursor-pointer"
+                  >
                     {policy.city} {policy.year}年{policy.period}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-              </div>
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
             </div>
             <div className="flex gap-2 mt-6">
               <Button variant="outline" onClick={() => setShowEditModal(false)}>

@@ -13,11 +13,12 @@ import {
   Plus
 } from 'lucide-react'
 import Link from 'next/link'
-import { Project, Company } from '@/lib/types'
+import { Project, Company, PolicyRule } from '@/lib/types'
 
 export default function ProjectOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   const [project, setProject] = useState<Project | null>(null)
   const [companies, setCompanies] = useState<Company[]>([])
+  const [policies, setPolicies] = useState<PolicyRule[]>([])
   const [projectId, setProjectId] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
@@ -50,6 +51,14 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
         if (companiesResult.success) {
           setCompanies(companiesResult.data || [])
         }
+        
+        // 加载政策信息
+        const policiesResponse = await fetch('/api/policies')
+        const policiesResult = await policiesResponse.json()
+        
+        if (policiesResult.success) {
+          setPolicies(policiesResult.data || [])
+        }
       } catch (error) {
         console.error('加载数据失败:', error)
       } finally {
@@ -61,6 +70,12 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
       loadData()
     }
   }, [projectId])
+
+  // 辅助函数：获取政策名称
+  const getPolicyName = (policyId: string) => {
+    const policy = policies.find(p => p.id === policyId)
+    return policy ? `${policy.city} ${policy.year}年${policy.period}` : policyId
+  }
 
   if (loading) {
     return (
@@ -270,8 +285,16 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
                       <div>
                         <h4 className="font-medium text-gray-900">{company.name}</h4>
                         <p className="text-sm text-gray-600">
-                          {company.city} • {company.wage_calculation_mode === 'monthly_detail' ? '完整月工资' : '平均工资还原'}
+                          {company.city}
+                          {company.selected_policy_ids && company.selected_policy_ids.length > 0 && (
+                            <> • 已配置政策: {company.selected_policy_ids.length}个</>
+                          )}
                         </p>
+                        {company.selected_policy_ids && company.selected_policy_ids.length > 0 && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {company.selected_policy_ids.map(policyId => getPolicyName(policyId)).join(', ')}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -348,7 +371,7 @@ const getProjectSteps = () => {
       id: 'policy-config',
       title: '政策配置',
       description: '为每个子公司选择对应城市的社保规则',
-      href: 'policy-config',
+      href: 'companies', // 修改为跳转到子公司管理页面
       status: 'pending'
     },
     {

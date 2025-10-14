@@ -91,15 +91,14 @@ export async function PUT(
       ? JSON.stringify(updateData.selected_policy_ids)
       : null
 
-    // 更新子公司信息
+    // 更新子公司信息 - 注意：在此阶段不更新工资相关字段，保持为NULL
     const { data: company, error } = await supabase
       .from('companies')
       .update({
         name: updateData.name,
         city: updateData.city,
-        selected_policy_id: policyData,
-        wage_calculation_mode: updateData.wage_calculation_mode,
-        wage_structure_config: updateData.wage_structure_config
+        selected_policy_id: policyData
+        // wage_calculation_mode 和 wage_structure_config 在此阶段保持为NULL，不更新
       })
       .eq('id', companyId)
       .select()

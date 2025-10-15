@@ -19,6 +19,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
   const [project, setProject] = useState<Project | null>(null)
   const [companies, setCompanies] = useState<Company[]>([])
   const [policies, setPolicies] = useState<PolicyRule[]>([])
+  const [companiesWithConfigs, setCompaniesWithConfigs] = useState<Record<string, any>>({})
   const [projectId, setProjectId] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
@@ -49,7 +50,26 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
         const companiesResult = await companiesResponse.json()
         
         if (companiesResult.success) {
-          setCompanies(companiesResult.data || [])
+          const companiesData = companiesResult.data || []
+          setCompanies(companiesData)
+          
+          // 加载每个公司的工资配置
+          const configsData: Record<string, any> = {}
+          await Promise.all(
+            companiesData.map(async (company: Company) => {
+              try {
+                const configResponse = await fetch(`/api/companies/${company.id}/wage-configs`)
+                const configResult = await configResponse.json()
+                if (configResult.success) {
+                  configsData[company.id] = configResult.configs || []
+                }
+              } catch (error) {
+                console.error(`获取公司 ${company.name} 的配置失败:`, error)
+                configsData[company.id] = []
+              }
+            })
+          )
+          setCompaniesWithConfigs(configsData)
         }
         
         // 加载政策信息
@@ -157,13 +177,28 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
       } else if (step.id === 'policy-config') {
         // 检查是否所有公司都配置了政策
         if (companies.length > 0) {
-          const companiesWithPolicy = companies.filter(company => company.selected_policy_id)
+          const companiesWithPolicy = companies.filter(company => company.selected_policy_ids && company.selected_policy_ids.length > 0)
           if (companiesWithPolicy.length === companies.length) {
             status = 'completed'
             description = `所有公司已配置政策`
           } else if (companiesWithPolicy.length > 0) {
             status = 'in_progress'
             description = `${companiesWithPolicy.length}/${companies.length} 个公司已配置政策`
+          }
+        }
+      } else if (step.id === 'upload-config') {
+        // 检查是否所有公司都配置了上传配置
+        if (companies.length > 0) {
+          const companiesWithUploadConfig = companies.filter(company => {
+            const configs = companiesWithConfigs[company.id] || []
+            return configs.length > 0
+          })
+          if (companiesWithUploadConfig.length === companies.length) {
+            status = 'completed'
+            description = `所有公司已完成上传配置`
+          } else if (companiesWithUploadConfig.length > 0) {
+            status = 'in_progress'
+            description = `${companiesWithUploadConfig.length}/${companies.length} 个公司已完成上传配置`
           }
         }
       }
@@ -278,41 +313,63 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
               </div>
             ) : (
               <div className="space-y-4">
-                {companies.map((company) => (
-                  <div key={company.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <Building2 className="h-6 w-6 text-blue-500" />
-                      <div>
-                        <h4 className="font-medium text-gray-900">{company.name}</h4>
-                        <p className="text-sm text-gray-600">
-                          {company.city}
-                          {company.selected_policy_ids && company.selected_policy_ids.length > 0 && (
-                            <> • 已配置政策: {company.selected_policy_ids.length}个</>
-                          )}
-                        </p>
-                        {company.selected_policy_ids && company.selected_policy_ids.length > 0 && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            {company.selected_policy_ids.map(policyId => getPolicyName(policyId)).join(', ')}
+                {companies.map((company) => {
+                  const configs = companiesWithConfigs[company.id] || []
+                  const hasUploadConfig = configs.length > 0
+                  
+                  return (
+                    <div key={company.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <Building2 className="h-6 w-6 text-blue-500" />
+                        <div>
+                          <h4 className="font-medium text-gray-900">{company.name}</h4>
+                          <p className="text-sm text-gray-600">
+                            {company.city}
+                            {company.selected_policy_ids && company.selected_policy_ids.length > 0 && (
+                              <> • 已配置政策: {company.selected_policy_ids.length}个</>
+                            )}
+                            {hasUploadConfig && (
+                              <> • 已配置上传: {configs.length}个</>
+                            )}
                           </p>
+                          {company.selected_policy_ids && company.selected_policy_ids.length > 0 && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              政策: {company.selected_policy_ids.map(policyId => getPolicyName(policyId)).join(', ')}
+                            </p>
+                          )}
+                          {hasUploadConfig && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              配置: {configs.map((config: any) => (
+                                <span key={config.id} className="mr-2">
+                                  {config.data_mode === 'monthly_detail' ? '明细工资' : '平均工资还原'}
+                                </span>
+                              ))}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {company.selected_policy_id ? (
+                          <Badge variant="default">已配置政策</Badge>
+                        ) : (
+                          <Badge variant="outline">未配置政策</Badge>
+                        )}
+                        {hasUploadConfig ? (
+                          <Badge variant="default">已配置上传</Badge>
+                        ) : (
+                          <Badge variant="outline">未配置上传</Badge>
+                        )}
+                        {projectId && (
+                          <Link href={`/projects/${projectId}/companies`}>
+                            <Button variant="ghost" size="sm">
+                              <Settings className="h-4 w-4" />
+                            </Button>
+                          </Link>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {company.selected_policy_id ? (
-                        <Badge variant="default">已配置政策</Badge>
-                      ) : (
-                        <Badge variant="outline">未配置政策</Badge>
-                      )}
-                      {projectId && (
-                        <Link href={`/projects/${projectId}/companies`}>
-                          <Button variant="ghost" size="sm">
-                            <Settings className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </CardContent>

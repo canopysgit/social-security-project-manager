@@ -367,6 +367,155 @@ export interface WageStructureForm {
   additional_fields: string[]
 }
 
+// 工资上传配置类型
+export interface WageUploadConfig {
+  id: string
+  company_id: string
+  project_id: string
+  
+  // 配置基本信息
+  config_name: string
+  data_mode: 'monthly_detail' | 'average_restore'
+  
+  // 工资项配置
+  wage_items_config: {
+    basic_salary: boolean           // 必选
+    total_salary: boolean          // 必选，改为total
+    bonus_items: string[]          // 可选，支持多个奖金项
+    allowance_items: string[]      // 可选，支持多个补贴项
+  }
+  
+  // 字段映射关系
+  field_mapping: {
+    [excel_field_name: string]: 'basic' | 'total' | 'bonus1' | 'bonus2' | 'bonus3' | 'bonus4' | 'bonus5' | 'allowance1' | 'allowance2' | 'allowance3' | 'allowance4' | 'allowance5'
+  }
+  
+  // 模式二特有配置
+  average_restore_config: {
+    months_paid: number             // 发放了几个月工资（支持13薪）
+  }
+  
+  // 配置元数据
+  is_template: boolean              // 是否作为模板供其他子公司使用
+  template_name?: string            // 模板名称
+  created_at: string
+  updated_at: string
+}
+
+// 工资记录类型（新结构 - 按子公司独立表）
+export interface CompanySalaryRecord {
+  id: string
+  company_id: string
+  employee_id: string
+  employee_name?: string
+  department?: string
+  
+  // 工资月份
+  salary_month: string // YYYY-MM-DD格式
+  
+  // 标准工资字段
+  basic_salary: number
+  total_salary: number  // 改为total，不再是gross
+  
+  // 奖金字段（动态）
+  bonus1: number  // 可以是13薪
+  bonus2: number
+  bonus3: number
+  bonus4: number
+  bonus5: number
+  
+  // 补贴字段（动态）
+  allowance1: number
+  allowance2: number
+  allowance3: number
+  allowance4: number
+  allowance5: number
+  
+  // 数据来源和元信息
+  data_source: 'upload' | 'calculated'  // 数据来源
+  original_filename?: string
+  upload_batch_id?: string
+  
+  // 时间戳
+  created_at: string
+  updated_at: string
+}
+
+// Excel字段映射配置
+export interface FieldMappingConfig {
+  excel_field: string          // Excel中的字段名
+  system_field: string         // 系统中的字段名
+  field_type: 'basic' | 'total' | 'bonus' | 'allowance'
+  is_required: boolean         // 是否必填
+  sample_value?: string        // 示例值（用于预览）
+}
+
+// 工资配置创建表单
+export interface WageConfigCreateForm {
+  config_name: string
+  data_mode: 'monthly_detail' | 'average_restore'
+  
+  // 工资项选择
+  wage_items: {
+    basic_salary: boolean
+    total_salary: boolean
+    bonus_items: string[]
+    allowance_items: string[]
+  }
+  
+  // 字段映射
+  field_mappings: FieldMappingConfig[]
+  
+  // 模式二配置
+  months_paid?: number
+  
+  // 模板设置
+  is_template?: boolean
+  template_name?: string
+}
+
+// Excel解析结果
+export interface ExcelParseResult {
+  filename: string
+  sheets: Array<{
+    name: string
+    headers: string[]
+    data_rows: any[]
+    sample_data: any[]
+  }>
+  total_sheets: number
+  detected_mode: 'monthly_detail' | 'average_restore' | 'unknown'
+}
+
+// 工资数据上传批次
+export interface WageUploadBatch {
+  id: string
+  company_id: string
+  config_id: string
+  filename: string
+  data_mode: 'monthly_detail' | 'average_restore'
+  total_records: number
+  processed_records: number
+  failed_records: number
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  error_message?: string
+  created_at: string
+  completed_at?: string
+}
+
+// 工资配置模板
+export interface WageConfigTemplate {
+  id: string
+  project_id: string
+  template_name: string
+  data_mode: 'monthly_detail' | 'average_restore'
+  wage_items_config: WageUploadConfig['wage_items_config']
+  field_mapping: WageUploadConfig['field_mapping']
+  average_restore_config: WageUploadConfig['average_restore_config']
+  usage_count: number
+  created_at: string
+}
+
 // 公司简称验证
 export const validateCompanyCode = (code: string): boolean => {
   // 2-10个字符，只允许大写字母和数字

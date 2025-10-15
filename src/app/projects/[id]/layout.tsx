@@ -151,15 +151,9 @@ export default function ProjectLayout({ children, params }: ProjectLayoutProps) 
                     政策配置
                   </div>
                 </Link>
-                <Link href={`/projects/${projectId}/calc-config`}>
-                  <div className="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 cursor-pointer flex items-center">
-                    <Calculator className="h-4 w-4 mr-2" />
-                    计算配置
-                  </div>
-                </Link>
                 <Link href={`/projects/${projectId}/upload-config`}>
                   <div className="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 cursor-pointer flex items-center">
-                    <Upload className="h-4 w-4 mr-2" />
+                    <Settings className="h-4 w-4 mr-2" />
                     上传配置
                   </div>
                 </Link>
@@ -167,6 +161,12 @@ export default function ProjectLayout({ children, params }: ProjectLayoutProps) 
                   <div className="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 cursor-pointer flex items-center">
                     <Upload className="h-4 w-4 mr-2" />
                     数据上传
+                  </div>
+                </Link>
+                <Link href={`/projects/${projectId}/calc-config`}>
+                  <div className="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 cursor-pointer flex items-center">
+                    <Calculator className="h-4 w-4 mr-2" />
+                    计算配置
                   </div>
                 </Link>
                 <Link href={`/projects/${projectId}/calculate`}>
